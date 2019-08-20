@@ -85,7 +85,6 @@
       game.craft(name, Math.min(count, maxPossibleCrafts));
     };
     const preCraft = prices => {
-      console.log('precrafting', prices);
       prices.forEach(e => {
         const delta = e.need - e.have;
         const craftRatio = 1 + game.getResCraftRatio(e.name);
@@ -93,7 +92,6 @@
         const ingredRecipe = getCraft(e.name);
         if (craftCount > 0 && ingredRecipe) {
           const ingredPrices = getPrices(ingredRecipe);
-          console.log(e.name, 'craft ratio', craftRatio, 'craft count', craftCount);
           preCraft(ingredPrices);
           craftUpTo(e.name, craftCount);
         }
