@@ -1,10 +1,9 @@
 // ==UserScript==
 // @name         Kittens Game
-// @namespace    http://tampermonkey.net/
+// @namespace    http://lyuhau.com/
 // @version      0.1
-// @downloadURL  https://github.com/lyuhau/tm-scripts/raw/master/kittens-game/progress-bar-%26-pre-craft.js
-// @description  try to take over the world!
-// @author       You
+// @description  try to take over the world! (with kittens)
+// @author       Yuhau Lin
 // @match        http://bloodrizer.ru/games/kittens/
 // @grant        none
 // ==/UserScript==
