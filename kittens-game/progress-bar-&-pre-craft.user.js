@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Kittens Game
+// @name         Kittens Game - progress bars & pre-craft buttons
 // @namespace    http://lyuhau.com/
-// @version      0.1
+// @version      0.2
 // @description  try to take over the world! (with kittens)
 // @author       Yuhau Lin
 // @match        http://bloodrizer.ru/games/kittens/
