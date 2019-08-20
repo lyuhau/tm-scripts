@@ -2,7 +2,7 @@
 // @name         Kittens Game
 // @namespace    http://tampermonkey.net/
 // @version      0.1
-// @downloadURL  https://raw.githubusercontent.com/lyuhau/tm-scripts/master/kittens-game/progress-bar-%26-pre-craft.js
+// @downloadURL  https://github.com/lyuhau/tm-scripts/raw/master/kittens-game/progress-bar-%26-pre-craft.js
 // @description  try to take over the world!
 // @author       You
 // @match        http://bloodrizer.ru/games/kittens/
