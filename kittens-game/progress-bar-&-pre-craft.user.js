@@ -20,11 +20,11 @@
       'building': game.bld.buildingsData,
       'science':  Object.values(game.science.metaCache),
       'upgrade':  game.workshop.upgrades,
-      'craft':  game.workshop.crafts,
-      'trade':  game.diplomacy.races,
+      'craft':    game.workshop.crafts,
+      'trade':    game.diplomacy.races,
       'unicorn':  game.religion.meta[0].meta,
-      'solar':  game.religion.meta[1].meta,
-      'black':  game.religion.meta[2].meta,
+      'solar':    game.religion.meta[1].meta,
+      'black':    game.religion.meta[2].meta,
     };
     const infoMap = Object.keys(infoLists).reduce((acc, next) => { acc[next] = infoLists[next].map(e => ({ [e.name]: e })).reduce((a, b) => Object.assign(a, b), {}); return acc; }, {});
 
