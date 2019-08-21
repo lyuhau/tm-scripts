@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kittens Game - progress bars & pre-craft buttons
 // @namespace    http://lyuhau.com/
-// @version      0.6
+// @version      0.7
 // @description  try to take over the world! (with kittens)
 // @author       Yuhau Lin
 // @match        http://bloodrizer.ru/games/kittens/
@@ -95,13 +95,17 @@
     const preCraft = prices => {
       prices.forEach(e => {
         const delta = e.need - e.have;
+        if (delta <= 0) {
+          return;
+        }
+        const ingredPrices = getPrices(e.name);
+        if (!ingredPrices) {
+          return;
+        }
         const craftRatio = 1 + game.getResCraftRatio(e.name);
         const craftCount = Math.ceil(delta / craftRatio);
-        const ingredPrices = getPrices(e.name);
-        if (craftCount > 0 && ingredPrices) {
-          preCraft(ingredPrices);
-          craftUpTo(e.name, craftCount);
-        }
+        preCraft(ingredPrices.map(p => ({...p, 'need': p.need * craftCount})));
+        craftUpTo(e.name, craftCount);
       });
     };
 
