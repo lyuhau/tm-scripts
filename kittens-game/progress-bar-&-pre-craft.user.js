@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kittens Game - progress bars & pre-craft buttons
 // @namespace    http://lyuhau.com/
-// @version      0.4
+// @version      0.5
 // @description  try to take over the world! (with kittens)
 // @author       Yuhau Lin
 // @match        http://bloodrizer.ru/games/kittens/
@@ -53,7 +53,7 @@
         case 3: by = args[1]; break;
       }
       const valueRegexp = new RegExp(`^${value}$`, 'i');
-      return infos.flatMap(e => [e, ...(e.stages || [])]).find(e => by.some(b => valueRegexp.test(e[b])));
+      return infos.find(e => [e, ...(e.stages || [])].find(e => by.some(b => valueRegexp.test(e[b]))));
     };
     const getNonResourceInfo = (() => {
       const getNonResourceInfos = [].concat.apply([], Object.keys(infoLists)
@@ -68,7 +68,7 @@
     const getPrices = info => {
       const infoStaged = (info.stages || [])[info.stage] || info; // for buildings
       const prices = infoStaged.prices || [{ 'name': 'manpower', 'val': 50 }, { 'name': 'gold', 'val': 15 }].concat(infoStaged.buys); // for trades
-      const ratio = infoStaged.priceRatio || 1;
+      const ratio = info.priceRatio || 1;
       const bought = info.val || 0;
 
       return prices.map(e => ({
