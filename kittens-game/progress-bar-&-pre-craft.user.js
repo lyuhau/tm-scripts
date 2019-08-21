@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kittens Game - progress bars & pre-craft buttons
 // @namespace    http://lyuhau.com/
-// @version      0.5
+// @version      0.6
 // @description  try to take over the world! (with kittens)
 // @author       Yuhau Lin
 // @match        http://bloodrizer.ru/games/kittens/
@@ -14,20 +14,22 @@
   const $ = jQuery;
 
   $.fn.x = function(xpath) {
-      const result = [];
-      this.each((i, e) => {
-          const xpathResult = document.evaluate(xpath, e, null, XPathResult.ORDERED_NODE_ITERATOR_TYPE, null);
+    const result = [];
+    this.each((i, e) => {
+      const xpathResult = document.evaluate(xpath, e, null, XPathResult.ORDERED_NODE_ITERATOR_TYPE, null);
 
-          var elem;
-          while (elem = xpathResult.iterateNext()) {
-              result.push(elem);
-          }
-      });
-      return $(result);
+      var elem;
+      while (elem = xpathResult.iterateNext()) {
+        result.push(elem);
+      }
+    });
+    return $(result);
   };
-  const $x = (xpath, context) => $(context ? context : document).x(xpath);
 
   $(document).ready(() => setTimeout(() => {
+
+    const mergeObjectList = list => list.reduce((acc, obj) => ({...acc, ...obj}), {});
+    const mergeEntryList = list => list.reduce((acc, entry) => ({...acc, [entry[0]]: entry[1]}), {});
 
     const infoLists = {
       'resource': game.resPool.resources,
@@ -40,8 +42,21 @@
       'solar':    game.religion.meta[1].meta,
       'black':    game.religion.meta[2].meta,
     };
-    const infoMap = Object.keys(infoLists).reduce((acc, next) => { acc[next] = infoLists[next].map(e => ({ [e.name]: e })).reduce((a, b) => Object.assign(a, b), {}); return acc; }, {});
+    const infoMaps = mergeEntryList(Object.entries(infoLists).map(entry => [entry[0], mergeEntryList(entry[1].map(e => [e.name, e]))]));
+    // non-resource only
+    const typeLookup = mergeEntryList(Object.entries(infoLists).filter(entry => entry[0] != 'resource').flatMap(entry => entry[1].map(info => [info.name, entry[0]])));
+    const priceFunctionsMap = {
+      'building': x => game.bld.getPrices(x),
+      'science':  x => game.science.getPrices(game.science.get(x)),
+      'upgrade':  x => game.workshop.get(x).prices,
+      'craft':    x => game.workshop.getCraftPrice(game.workshop.getCraft(x)),
+      'trade':    x => [{ 'name': 'manpower', 'val': 50 }, { 'name': 'gold', 'val': 15 }].concat(game.diplomacy.get(x).buys),
+      'unicorn':  x => [game.religion.getZU(x)].flatMap(info => info.prices.map(p => ({...p, 'val': p.val * info.priceRatio ** info.val}))),
+      'solar':    x => [game.religion.getRU(x)].flatMap(info => info.prices.map(p => ({...p, 'val': p.val * info.priceRatio ** info.val}))),
+      'black':    x => [game.religion.getTU(x)].flatMap(info => info.prices.map(p => ({...p, 'val': p.val * info.priceRatio ** info.val}))),
+    };
 
+    // arbitrary info lookup (by name, title, or label)
     const getInfo = (...args) => {
       const vlen = args.length;
       var infos = Array.isArray(args[0]) ? args[0] : infoLists[args[0]],
@@ -63,35 +78,27 @@
     })();
 
     // crafting prices, percentages
-    const getResourceAmount = name => infoMap.resource[name].value;
-    const getCraft = name => infoMap.craft[name];
-    const getPrices = info => {
-      const infoStaged = (info.stages || [])[info.stage] || info; // for buildings
-      const prices = infoStaged.prices || [{ 'name': 'manpower', 'val': 50 }, { 'name': 'gold', 'val': 15 }].concat(infoStaged.buys); // for trades
-      const ratio = info.priceRatio || 1;
-      const bought = info.val || 0;
+    const getPrices = name => {
+      const priceGetter = priceFunctionsMap[typeLookup[name]];
+      if (!priceGetter) {
+        return undefined;
+      }
+      const prices = priceGetter(name);
 
       return prices.map(e => ({
         'name': e.name,
-        'have': getResourceAmount(e.name),
-        'need': e.val * ratio ** bought
+        'have': game.resPool.get(e.name).value,
+        'need': e.val
       }));
     };
-    const craftUpTo = (name, count) => {
-      const recipe = getCraft(name);
-      const prices = getPrices(recipe);
-      const amountCraftable = prices.map(e => Math.floor(e.have / e.need));
-      const maxPossibleCrafts = Math.min(...amountCraftable);
-      game.craft(name, Math.min(count, maxPossibleCrafts));
-    };
+    const craftUpTo = (name, count) => game.craft(name, Math.min(count, game.workshop.getCraftAllCount(name)));
     const preCraft = prices => {
       prices.forEach(e => {
         const delta = e.need - e.have;
         const craftRatio = 1 + game.getResCraftRatio(e.name);
         const craftCount = Math.ceil(delta / craftRatio);
-        const ingredRecipe = getCraft(e.name);
-        if (craftCount > 0 && ingredRecipe) {
-          const ingredPrices = getPrices(ingredRecipe);
+        const ingredPrices = getPrices(e.name);
+        if (craftCount > 0 && ingredPrices) {
           preCraft(ingredPrices);
           craftUpTo(e.name, craftCount);
         }
@@ -113,7 +120,7 @@
           return;
         }
 
-        const prices = getPrices(info);
+        const prices = getPrices(info.name);
         const percents = prices.map(e => e.have / e.need);
         const minPercent = Math.min(...percents);
 
@@ -139,7 +146,7 @@
           $e.append(progressBar);
         }
         // only show the pre-craft button if at least some of the ingredients are craftable
-        if (!precraftBtn.length && prices.some(e => getCraft(e.name))) {
+        if (!precraftBtn.length && prices.some(e => game.workshop.getCraft(e.name))) {
           const a = $('<a href="#" style="display: block; float: right">pc</a>');
           precraftBtn = $('<div class="precraftBtn" style="float: right" />').append(a);
           $e.find('> .btnContent').append(precraftBtn);
