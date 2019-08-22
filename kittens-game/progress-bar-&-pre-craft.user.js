@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kittens Game - progress bars & pre-craft buttons
 // @namespace    http://lyuhau.com/
-// @version      0.7
+// @version      0.8
 // @description  try to take over the world! (with kittens)
 // @author       Yuhau Lin
 // @match        http://bloodrizer.ru/games/kittens/
@@ -32,28 +32,32 @@
     const mergeEntryList = list => list.reduce((acc, entry) => ({...acc, [entry[0]]: entry[1]}), {});
 
     const infoLists = {
-      'resource': game.resPool.resources,
-      'building': game.bld.buildingsData,
-      'science':  Object.values(game.science.metaCache),
-      'upgrade':  game.workshop.upgrades,
-      'craft':    game.workshop.crafts,
-      'trade':    game.diplomacy.races,
-      'unicorn':  game.religion.meta[0].meta,
-      'solar':    game.religion.meta[1].meta,
-      'black':    game.religion.meta[2].meta,
+      'resource':      game.resPool.resources,
+      'building':      game.bld.buildingsData,
+      'science':       Object.values(game.science.metaCache),
+      'upgrade':       game.workshop.upgrades,
+      'craft':         game.workshop.crafts,
+      'trade':         game.diplomacy.races,
+      'unicorn':       game.religion.meta[0].meta,
+      'solar':         game.religion.meta[1].meta,
+      'black':         game.religion.meta[2].meta,
+      'spaceProgram':  game.space.programs,
+      'spaceBuilding': game.space.planets.flatMap(p => p.buildings),
     };
     const infoMaps = mergeEntryList(Object.entries(infoLists).map(entry => [entry[0], mergeEntryList(entry[1].map(e => [e.name, e]))]));
     // non-resource only
     const typeLookup = mergeEntryList(Object.entries(infoLists).filter(entry => entry[0] != 'resource').flatMap(entry => entry[1].map(info => [info.name, entry[0]])));
     const priceFunctionsMap = {
-      'building': x => game.bld.getPrices(x),
-      'science':  x => game.science.getPrices(game.science.get(x)),
-      'upgrade':  x => game.workshop.get(x).prices,
-      'craft':    x => game.workshop.getCraftPrice(game.workshop.getCraft(x)),
-      'trade':    x => [{ 'name': 'manpower', 'val': 50 }, { 'name': 'gold', 'val': 15 }].concat(game.diplomacy.get(x).buys),
-      'unicorn':  x => [game.religion.getZU(x)].flatMap(info => info.prices.map(p => ({...p, 'val': p.val * info.priceRatio ** info.val}))),
-      'solar':    x => [game.religion.getRU(x)].flatMap(info => info.prices.map(p => ({...p, 'val': p.val * info.priceRatio ** info.val}))),
-      'black':    x => [game.religion.getTU(x)].flatMap(info => info.prices.map(p => ({...p, 'val': p.val * info.priceRatio ** info.val}))),
+      'building':      x => game.bld.getPrices(x),
+      'science':       x => game.science.getPrices(game.science.get(x)),
+      'upgrade':       x => game.workshop.get(x).prices,
+      'craft':         x => game.workshop.getCraftPrice(game.workshop.getCraft(x)),
+      'trade':         x => [{ 'name': 'manpower', 'val': 50 }, { 'name': 'gold', 'val': 15 }].concat(game.diplomacy.get(x).buys),
+      'unicorn':       x => [game.religion.getZU(x)].flatMap(info => info.prices.map(p => ({...p, 'val': p.val * info.priceRatio ** info.val}))),
+      'solar':         x => [game.religion.getRU(x)].flatMap(info => info.prices.map(p => ({...p, 'val': p.val * info.priceRatio ** info.val}))),
+      'black':         x => [game.religion.getTU(x)].flatMap(info => info.prices.map(p => ({...p, 'val': p.val * info.priceRatio ** info.val}))),
+      'spaceProgram':  x => game.space.getProgram(x).prices,
+      'spaceBuilding': x => game.space.getBuilding(x).prices,
     };
 
     // arbitrary info lookup (by name, title, or label)
