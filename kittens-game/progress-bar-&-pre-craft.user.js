@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kittens Game - progress bars & pre-craft buttons
 // @namespace    http://lyuhau.com/
-// @version      0.8
+// @version      0.9
 // @description  try to take over the world! (with kittens)
 // @author       Yuhau Lin
 // @match        http://bloodrizer.ru/games/kittens/
@@ -26,7 +26,11 @@
     return $(result);
   };
 
-  $(document).ready(() => setTimeout(() => {
+  const init = () => {
+    if (!game.resPool) {
+      setTimeout(init, 100);
+      return;
+    }
 
     const mergeObjectList = list => list.reduce((acc, obj) => ({...acc, ...obj}), {});
     const mergeEntryList = list => list.reduce((acc, entry) => ({...acc, [entry[0]]: entry[1]}), {});
@@ -164,5 +168,7 @@
       });
     }, 100);
 
-  }, 1500));
+  };
+
+  $(document).ready(init);
 })();
