@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kittens Game - progress bars & pre-craft buttons
 // @namespace    http://lyuhau.com/
-// @version      1.0
+// @version      1.1
 // @description  try to take over the world! (with kittens)
 // @author       Yuhau Lin
 // @match        http://bloodrizer.ru/games/kittens/
@@ -17,11 +17,24 @@
       return;
     }
 
-    const extendPrices = prices => prices.map(e => ({
-        'name': e.name,
-        'have': game.resPool.get(e.name).value,
-        'need': e.val
-      }));
+    const extendPrices = prices => prices.map(p => ({
+      'name': p.name,
+      'have': game.resPool.get(p.name).value,
+      'need': p.val
+    })).map(p => ({
+      ...p,
+      'delta': p.need - p.have,
+      'percent': p.have / p.need
+    }));
+    const getRawResPrices = priceModels => {
+      var rawResPrices = dojo.clone(priceModels);
+      while (rawResPrices.some(pm => pm.children)) {
+        rawResPrices = rawResPrices.flatMap(pm => pm.children ? pm.children : pm);
+      }
+      rawResPrices = Object.entries(rawResPrices.reduce((acc, pm) => ({...acc, [pm.name]: (acc[pm.name] || 0) + pm.val}), {}))
+        .map(e => ({'name': [e[0]], 'val': e[1]}));
+      return rawResPrices;
+    };
     const craftUpTo = (name, count) => game.craft(name, Math.min(count, game.workshop.getCraftAllCount(name)));
     const preCraft = prices => {
       prices.forEach(e => {
@@ -30,7 +43,7 @@
           return;
         }
         const ingred = game.workshop.getCraft(e.name);
-        if (!ingred) {
+        if (e.name == 'wood' || !ingred) {
           return;
         }
         const ingredPrices = extendPrices(game.workshop.getCraftPrice(ingred));
@@ -41,52 +54,89 @@
       });
     };
 
+    const initButtonExtension = button => {
+      const $button = $(button.buttonContent);
+      const statusBar = button.statusBar = $('<div class="statusBar"/>')
+      .css({
+        'display': 'none',
+        'position': 'absolute',
+        'bottom': '0',
+        'left': '0',
+        'height': '2px',
+        'width': '100%',
+        'border-top': '1px solid #0004',
+        'border-radius': '0 0 2px 2px',
+        'pointer-events': 'none',
+      });
+      $button.append(statusBar);
+
+      const progressBar = statusBar.progressBar = $('<div class="progressBar"/>')
+      .css({
+        'display': 'inline-block',
+        'float': 'left',
+        'height': '100%',
+        'background-color': '#FF0000AA',
+      });
+      statusBar.append(progressBar);
+
+      const precraftButton = button.precraftButton = $('<div class="precraftBtn" style="display: none; float: right" />');
+      const precraftA = precraftButton.precraftA = $('<a href="#" style="display: block; float: right">pc</a>');
+      $button.append(precraftButton.append(precraftA));
+
+      const precraftBar = statusBar.precraftBar = $('<div class="precraftBar"/>')
+      .css({
+        'display': 'inline-block',
+        'float': 'left',
+        'height': '100%',
+      });
+      statusBar.append(precraftBar);
+    };
+
     setInterval(() => {
-      $('.tabInner .btn.nosel:not(.disabled)').find('.progressBar, .precraftBtn').remove();
+      //      $('.btn.nosel').css('overflow', 'hidden');
+      $('.tabInner .btn.nosel:not(.disabled)').find('.statusBar, .precraftBtn').css('display', 'none');
 
-      const buttonsWithPrices = [game.tabs.find(t => t.tabId == game.ui.activeTabId)]
-        .flatMap(t => [...new Set(Object.keys(t).filter(k => /button|panel|children/i.test(k)).flatMap(k => t[k]))]).filter(Boolean)
-        .flatMap(x => x.model ? x : x.tradeBtn || x.children).filter(Boolean)
-        .flatMap(x => x.model ? x : x.tradeBtn || x.children).filter(Boolean)
-        .flatMap(x => x.model ? x : x.tradeBtn || x.children).filter(Boolean);
+      var buttonsWithPrices = [game.tabs.find(t => t.tabId == game.ui.activeTabId)]
+        .flatMap(t => [...new Set(Object.keys(t).filter(k => /btn|button|panel|children/i.test(k)).flatMap(k => t[k]))]).filter(Boolean);
+      while (buttonsWithPrices.some(x => !x.model)) {
+        buttonsWithPrices = buttonsWithPrices.flatMap(x => x.model ? x : x.tradeBtn || x.race || x.children).filter(Boolean);
+      }
 
-      buttonsWithPrices.forEach(b => {
-        const $e = $(b.buttonContent.parentElement);
+      buttonsWithPrices.forEach(button => {
+        const $button = $(button.buttonContent);
 
-        const prices = extendPrices(b.model.prices);
-        const percents = prices.map(e => e.have / e.need);
-        const minPercent = Math.min(...percents);
+        if (!$button.find('.statusBar').length) {
+          initButtonExtension(button);
+        }
 
-        var progressBar = $e.find('.progressBar').first();
-        var precraftBtn = $e.find('.precraftBtn').first();
-        if (minPercent >= 1) {
-          progressBar.remove();
-          precraftBtn.remove();
+        if (/\((?:complete|in progress)\)/.test(button.model.name)) {
           return;
         }
 
-        if (!progressBar.length) {
-          progressBar = $('<div class="progressBar"/>');
-          progressBar.css({
-            'display': 'inline-block',
-            'position': 'absolute',
-            'bottom': '0',
-            'left': '0',
-            'height': '3px',
-            'background-color': '#F00',
-            'border-radius': '0 0 0 2px'
-          });
-          $e.append(progressBar);
+        const prices = extendPrices(button.model.prices);
+        const minPercent = Math.max(Math.min(1, ...prices.map(p => p.percent)), .01);
+        if (minPercent >= 1) {
+          return;
         }
-        progressBar.css('width', `${minPercent * 100}%`);
+
+        button.statusBar.css({'display': 'inline-block'});
+        button.statusBar.progressBar.css({'width': minPercent * 100 + '%'});
 
         // only show the pre-craft button if at least some of the ingredients are craftable
-        if (!precraftBtn.length && prices.some(e => game.workshop.getCraft(e.name))) {
-          const a = $('<a href="#" style="display: block; float: right">pc</a>');
-          precraftBtn = $('<div class="precraftBtn" style="float: right" />').append(a);
-          $e.find('> .btnContent').append(precraftBtn);
+        if (prices.some(e => e.name != 'wood' && game.workshop.getCraft(e.name))) {
+          button.precraftButton.css('display', '');
+          button.precraftButton.precraftA.off('click').on('click', e => { e.stopPropagation(); e.preventDefault(); preCraft(prices); return false; });
+
+          button.controller.fetchExtendedModel(button.model);
+          const rawResPrices = getRawResPrices(button.model.priceModels);
+          const rawResMinPercent = Math.min(1, ...extendPrices(rawResPrices).map(p => p.percent));
+          button.statusBar.precraftBar.css({
+            'display': 'inline-block',
+            'width': (rawResMinPercent - minPercent) * 100 + '%',
+            'background-color': rawResMinPercent == 1 ? '#00FF00AA' : '#FFA500AA',
+          })
         }
-        precraftBtn.find('a').off('click').on('click', e => { e.stopPropagation(); e.preventDefault(); preCraft(prices); return false; });
+
       });
     }, 100);
 
