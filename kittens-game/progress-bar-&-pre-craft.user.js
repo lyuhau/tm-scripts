@@ -1,10 +1,10 @@
 // ==UserScript==
 // @name         Kittens Game - progress bars & pre-craft buttons
 // @namespace    http://lyuhau.com/
-// @version      1.1
+// @version      1.3
 // @description  try to take over the world! (with kittens)
 // @author       Yuhau Lin
-// @match        http://bloodrizer.ru/games/kittens/
+// @match        http://kittensgame.com/web/
 // @grant        none
 // ==/UserScript==
 
@@ -132,7 +132,7 @@
 
         // don't show the progress/precraft stuff if it's already 100%
         const prices = extendPrices(button.model.prices);
-        const minPercent = Math.max(Math.min(1, ...prices.map(p => p.percent)), .01);  // the 1% minimum is there so you can tell there is a progress bar
+        const minPercent = Math.max(Math.min(1, ...prices.map(p => p.percent)), .01); // the 1% minimum is there so you can tell there is a progress bar
         if (minPercent >= 1) {
           return;
         }
@@ -164,6 +164,8 @@
     }, 100);
 
   };
-
-  $(document).ready(init);
+  setTimeout(function () {
+      console.log('Setting timer to load plugin');
+      init();
+  }, 20000);
 })();
